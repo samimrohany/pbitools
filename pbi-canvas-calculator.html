@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Power BI Canvas Position Calculator</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f3f2f1;color:#201f1e;min-height:100vh;padding:24px 16px;}
+  h1{font-size:18px;font-weight:600;color:#201f1e;margin-bottom:4px;}
+  .subtitle{font-size:13px;color:#605e5c;margin-bottom:20px;}
+  .card{background:#fff;border:1px solid #edebe9;border-radius:8px;padding:16px 20px;margin-bottom:14px;}
+  .section-label{font-size:11px;font-weight:600;color:#a19f9d;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:10px;}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .field{display:flex;flex-direction:column;gap:4px;}
+  label{font-size:12px;color:#605e5c;font-weight:500;}
+  input[type=number]{height:34px;padding:0 10px;border:1px solid #c8c6c4;border-radius:4px;font-size:14px;color:#201f1e;background:#fff;outline:none;width:100%;}
+  input[type=number]:focus{border-color:#0078d4;box-shadow:0 0 0 1px #0078d4;}
+  input[type=number]:hover{border-color:#a19f9d;}
+  .seg{display:flex;}
+  .seg button{flex:1;height:34px;border:1px solid #c8c6c4;background:#fff;color:#605e5c;font-size:13px;cursor:pointer;font-family:inherit;transition:all 0.1s;}
+  .seg button:first-child{border-radius:4px 0 0 4px;}
+  .seg button:last-child{border-radius:0 4px 4px 0;border-left:none;}
+  .seg button.active{background:#0078d4;color:#fff;border-color:#0078d4;}
+  .seg button:not(.active):hover{background:#f3f2f1;}
+  #canvas-preview{background:#f3f2f1;border:1px solid #edebe9;border-radius:4px;overflow:hidden;}
+  .empty-state{display:flex;align-items:center;justify-content:center;height:140px;color:#a19f9d;font-size:13px;}
+  .summary-grid{display:grid;grid-template-columns:auto 1fr;gap:5px 16px;font-size:13px;}
+  .summary-grid .lbl{color:#a19f9d;font-size:12px;align-self:center;}
+  .summary-grid .val{font-family:'Cascadia Code','Consolas','Courier New',monospace;font-size:13px;color:#201f1e;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  thead th{text-align:left;font-size:11px;font-weight:600;color:#a19f9d;letter-spacing:0.05em;padding:6px 8px;border-bottom:1px solid #edebe9;}
+  tbody td{padding:6px 8px;border-bottom:1px solid #f3f2f1;font-family:'Cascadia Code','Consolas','Courier New',monospace;font-size:13px;color:#201f1e;}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover td{background:#f3f2f1;}
+  td.muted{color:#a19f9d;}
+  .copy-btn{font-size:11px;padding:2px 10px;border:1px solid #c8c6c4;border-radius:4px;background:#fff;color:#605e5c;cursor:pointer;font-family:inherit;}
+  .copy-btn:hover{background:#f3f2f1;}
+  .copy-btn.copied{color:#107c10;border-color:#107c10;}
+  .toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;}
+  .toolbar-btns{display:flex;gap:6px;flex-wrap:wrap;}
+  .copy-all{font-size:12px;padding:5px 12px;border:1px solid #c8c6c4;border-radius:4px;background:#fff;color:#605e5c;cursor:pointer;font-family:inherit;}
+  .copy-all:hover{background:#f3f2f1;}
+  .pbi-badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#0078d4;font-weight:500;}
+  .pbi-dot{width:8px;height:8px;border-radius:50%;background:#f2c811;}
+  @media(max-width:600px){.grid3{grid-template-columns:1fr 1fr;}.grid2{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<div style="max-width:780px;margin:0 auto;">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:8px;">
+    <div>
+      <h1>Canvas Position Calculator</h1>
+      <p class="subtitle">Generate X / Y coordinates for evenly spaced objects on a Power BI canvas</p>
+    </div>
+    <span class="pbi-badge"><span class="pbi-dot"></span>Power BI Dev Tool</span>
+  </div>
+
+  <div class="card">
+    <div class="section-label">First object — origin</div>
+    <div class="grid3">
+      <div class="field"><label>X</label><input type="number" id="x1" value="20" min="0"/></div>
+      <div class="field"><label>Y</label><input type="number" id="y1" value="20" min="0"/></div>
+      <div></div>
+    </div>
+    <div class="section-label">Object size &amp; spacing</div>
+    <div class="grid3">
+      <div class="field"><label>Width</label><input type="number" id="w" value="200" min="1"/></div>
+      <div class="field"><label>Height</label><input type="number" id="h" value="120" min="1"/></div>
+      <div class="field"><label>Gap</label><input type="number" id="gap" value="10" min="0"/></div>
+    </div>
+    <div style="display:flex;gap:24px;align-items:flex-end;flex-wrap:wrap;">
+      <div class="field">
+        <label>Direction</label>
+        <div class="seg" style="width:200px;">
+          <button class="active" id="btn-h" onclick="setDir('h')">→ Horizontal</button>
+          <button id="btn-v" onclick="setDir('v')">↓ Vertical</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Number of objects</label>
+        <input type="number" id="count" value="4" min="1" max="100" style="width:80px;"/>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="section-label">Preview</div>
+      <div id="canvas-preview"><div class="empty-state">fill in values above</div></div>
+    </div>
+    <div class="card">
+      <div class="section-label">Summary</div>
+      <div id="summary" class="summary-grid" style="color:#a19f9d;font-size:13px;">—</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="toolbar">
+      <div class="section-label" style="margin-bottom:0;">Object positions</div>
+      <div class="toolbar-btns">
+        <button class="copy-all" onclick="copyAll('xy')">Copy X, Y (TSV)</button>
+        <button class="copy-all" onclick="copyAll('json')">Copy JSON</button>
+        <button class="copy-all" onclick="copyAll('dax')">Copy DAX vars</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:40px;">#</th>
+            <th>X</th><th>Y</th>
+            <th>Width</th><th>Height</th>
+            <th style="width:70px;"></th>
+          </tr>
+        </thead>
+        <tbody id="out-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <p style="font-size:11px;color:#a19f9d;text-align:center;margin-top:8px;">Power BI canvas default: 1280 × 720 px &nbsp;·&nbsp; 16:9 ratio &nbsp;·&nbsp; coordinates in pixels</p>
+</div>
+
+<script>
+let dir='h',positions=[];
+
+function setDir(d){
+  dir=d;
+  document.getElementById('btn-h').className=d==='h'?'active':'';
+  document.getElementById('btn-v').className=d==='v'?'active':'';
+  calc();
+}
+
+function val(id){return parseFloat(document.getElementById(id).value)||0;}
+
+function calc(){
+  const x1=val('x1'),y1=val('y1'),w=val('w'),h=val('h'),gap=val('gap');
+  const n=Math.max(1,Math.min(100,Math.floor(val('count'))));
+  positions=[];
+  for(let i=0;i<n;i++){
+    positions.push({n:i+1,x:dir==='h'?x1+i*(w+gap):x1,y:dir==='v'?y1+i*(h+gap):y1,w,h});
+  }
+  renderTable();
+  renderPreview(x1,y1,w,h,gap,n);
+  renderSummary(x1,y1,w,h,n);
+}
+
+function renderTable(){
+  document.getElementById('out-body').innerHTML=positions.map(p=>`
+    <tr>
+      <td class="muted">${p.n}</td>
+      <td>${p.x}</td><td>${p.y}</td>
+      <td class="muted">${p.w}</td><td class="muted">${p.h}</td>
+      <td><button class="copy-btn" data-idx="${p.n-1}" onclick="copyRow(${p.n-1})">copy</button></td>
+    </tr>`).join('');
+}
+
+function renderPreview(x1,y1,w,h,gap,n){
+  const el=document.getElementById('canvas-preview');
+  const totalW=dir==='h'?x1+n*(w+gap)-gap+x1:x1+w+x1;
+  const totalH=dir==='v'?y1+n*(h+gap)-gap+y1:y1+h+y1;
+  const cW=300,cH=150;
+  const scale=Math.min(cW/totalW,cH/totalH)*0.82;
+  const ox=(cW-totalW*scale)/2,oy=(cH-totalH*scale)/2;
+  const rects=positions.map((p,i)=>{
+    const a=(0.3+0.7*(i/Math.max(positions.length-1,1))).toFixed(2);
+    return `<rect x="${(ox+p.x*scale).toFixed(1)}" y="${(oy+p.y*scale).toFixed(1)}" width="${(p.w*scale).toFixed(1)}" height="${(p.h*scale).toFixed(1)}" rx="2" fill="#0078d4" fill-opacity="${a}" stroke="#50a0e0" stroke-width="0.5"/>`;
+  }).join('');
+  el.innerHTML=`<svg width="${cW}" height="${cH}" xmlns="http://www.w3.org/2000/svg">${rects}</svg>`;
+}
+
+function renderSummary(x1,y1,w,h,n){
+  const last=positions[n-1];
+  const endX=last.x+w,endY=last.y+h;
+  const spanW=dir==='h'?n*(w+val('gap'))-val('gap'):w;
+  const spanH=dir==='v'?n*(h+val('gap'))-val('gap'):h;
+  document.getElementById('summary').innerHTML=`
+    <span class="lbl">Total span</span><span class="val">${spanW} × ${spanH} px</span>
+    <span class="lbl">Last object ends at</span><span class="val">X ${endX}, Y ${endY}</span>
+    <span class="lbl">Canvas footprint</span><span class="val">${x1}–${endX} × ${y1}–${endY}</span>
+    <span class="lbl">Step size</span><span class="val">${dir==='h'?w+val('gap'):h+val('gap')} px per object</span>`;
+}
+
+function copyRow(i){
+  const p=positions[i];
+  navigator.clipboard.writeText(`X: ${p.x}, Y: ${p.y}`);
+  const btn=document.querySelector(`button[data-idx="${i}"]`);
+  btn.textContent='✓';btn.className='copy-btn copied';
+  setTimeout(()=>{btn.textContent='copy';btn.className='copy-btn';},1300);
+}
+
+function copyAll(fmt){
+  let txt='';
+  if(fmt==='xy') txt='#\tX\tY\tWidth\tHeight\n'+positions.map(p=>`${p.n}\t${p.x}\t${p.y}\t${p.w}\t${p.h}`).join('\n');
+  else if(fmt==='json') txt=JSON.stringify(positions.map(p=>({x:p.x,y:p.y,width:p.w,height:p.h})),null,2);
+  else if(fmt==='dax') txt=positions.map(p=>`VAR obj${p.n}X = ${p.x}\nVAR obj${p.n}Y = ${p.y}\nVAR obj${p.n}W = ${p.w}\nVAR obj${p.n}H = ${p.h}`).join('\n');
+  navigator.clipboard.writeText(txt);
+  const btns=document.querySelectorAll('.copy-all');
+  const idx=fmt==='xy'?0:fmt==='json'?1:2;
+  const orig=btns[idx].textContent;
+  btns[idx].textContent='Copied ✓';
+  setTimeout(()=>{btns[idx].textContent=orig;},1400);
+}
+
+['x1','y1','w','h','gap','count'].forEach(id=>document.getElementById(id).addEventListener('input',calc));
+calc();
+</script>
+</body>
+</html>
